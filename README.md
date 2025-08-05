@@ -6,4 +6,3 @@ Cool - this change is from RStudio.
 
 Cool - Rstudio
 
-
