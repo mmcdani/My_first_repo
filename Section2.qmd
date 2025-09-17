@@ -1,6 +1,6 @@
 ---
-title: "Section2"
-format: html
+title: "R Objects, Workflow, and Functions"
+format: pdf
 editor: visual
 ---
 
@@ -56,6 +56,6 @@ plot(0:n,
     dbinom(0:n, size = n, prob = prob),
     type = "h")
 norm_x <- seq(from = 0, to = n, length = 1000)
-dnorm(norm_x, mean n*prob, sd sqrt)
+dnorm(norm_x, mean = n * prob, sd = sqrt(n * prob * (1 - prob)))
 ```
 
