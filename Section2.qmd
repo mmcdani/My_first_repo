@@ -1,0 +1,61 @@
+---
+title: "Section2"
+format: html
+editor: visual
+---
+
+## if/then/else
+
+Fizz buzz challenge
+- take in a number
+- if it is divisible by 3 return fizz
+- if it is divisible by 5 return buzz
+- if it is divisible by 15 return fizz buzz
+```{r}
+number <- 15 
+if((number %% 15) == 0)  {
+  print("fizz buzz")
+} else if ((number %% 5) == 0) {
+  print ("buzz") 
+} else if ((number %% 3) == 0) {
+  print("fizz")
+} else {
+  print("whoops?")
+}
+
+#if(!(number %% 15))
+```
+
+# Loops
+
+Wrap the fizz buzz code into a loop to check for multipl values.
+```{r}
+for(number in -1:41){
+  if((number %% 15) == 0)  {
+    print("fizz buzz")
+  } else if ((number %% 5) == 0) {
+    print ("buzz") 
+  } else if ((number %% 3) == 0) {
+    print("fizz")
+  } else {
+    print("whoops?")
+  }
+}
+```
+
+# Writing R Functions 
+
+Normal approximation to the binomial
+```{r}
+n <- 40
+prob <- 0.3
+#probabilities from a binomial RV
+dbinom(0:n, size = n, prob = prob)
+#plot with plot 
+plot(0:n, 
+    dbinom(0:n, size = n, prob = prob),
+    type = "h")
+norm_x <- seq(from = 0, to = n, length = 1000)
+dnorm(norm_x, mean n*prob, sd sqrt)
+```
+
