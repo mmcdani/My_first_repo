@@ -1,0 +1,131 @@
+---
+title: "week_7"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+## Categorical Data Summaries
+
+-   to summarize categorical variables numerically, we use contingency tables
+-   to do this visually we use bar plots first lets read in the appendicitis data from previous lecture
+
+```{r}
+library(tidyverse)
+library(readxl) #load libraries
+app_data <- read_excel("data/app_data.xlsx", sheet = 1)
+app_data <- app_data |>
+  mutate(BMI = as.numeric(BMI),
+         US_Number = as.character(US_Number),
+         SexF = factor(Sex, levels = c("female", "male"), labels = c("Female", "Male")),
+         DiagnosisF = as.factor(Diagnosis),
+         SeverityF = as.factor(Severity))
+app_data
+```
+
+#Lets create contingency tables in Base R
+
+```{r}
+table(app_data$SexF)
+```
+
+useNA to include the NA values
+
+```{r}
+table(app_data$SexF, useNA = "always")
+```
+
+we can create a two way table(two-way for two variables) by adding the second variable in
+
+```{r}
+table(app_data$SexF, app_data$DiagnosisF) #returns an array. which means we can subset them if we want
+```
+
+return a *conditional* one-way table of Sex based on only those that had appendicitis:
+
+```{r}
+two_way_sex_diag <- table(app_data$SexF, app_data$DiagnosisF)
+two_way_sex_diag[,1]
+```
+
+we can add a third variable, but it is tough to display compactly
+
+```{r}
+table(app_data$SexF, app_data$DiagnosisF, app_data$Severity)
+```
+
+the output for the previous code has **, , = complicated**. R is hinting to access a 3D array
+
+We can return the conditional two-way table of Sex and Diagnosis for only those with an uncomplicated situation:
+```{r}
+three_way <- table(app_data$SexF, app_data$DiagnosisF, app_data$SeverityF)
+three_way[, , "uncomplicated"]
+```
+
+```{r}
+#or
+three_way[, , 2]
+```
+
+we can also get a one-way table conditional on two of the variables. Here is the one-way table for sex for only those with an uncomplicated situation and no appendicitis: 
+```{r}
+three_way[, 2, 2]
+```
+
+Lastly, note that you can supply a data frame instead of the individual vectors
+```{r}
+table(app_data[, c("SexF", "DiagnosisF")])
+```
+
+## Lets create contingency tables in TidyVerse
+
+one-way table:
+```{r}
+app_data |>
+  group_by(SexF) |>
+  summarize(count = n())
+```
+
+notice that NA values are included by default(probably a good thing). We can remove those with **tidyr::drop_na()**
+```{r}
+app_data |>
+  drop_na(SexF) |>
+  group_by(SexF) |>
+  summarize(count = n())
+```
+
+Two way table: Simply add another grouping variable. The **summarize()** function respects these groups when counting 
+```{r}
+app_data |>
+  drop_na(SexF, DiagnosisF) |>
+  group_by(SexF, DiagnosisF) |>
+  summarize(count = n())
+```
+
+this is not the best way for viewing (i.e a wider format would be more compact for displaying). Lets use tidyr::pivot_wider() to fix that
+```{r}
+app_data |>
+  drop_na(SexF, DiagnosisF) |>
+  group_by(SexF, DiagnosisF) |>
+  summarize(count = n()) |>
+  pivot_wider(names_from = DiagnosisF, values_from = count)
+```
+
+three-way table: again, just add more grouping variables 
+```{r}
+app_data |>
+  drop_na(SexF, DiagnosisF, SeverityF) |>
+  group_by(SexF, DiagnosisF, SeverityF) |>
+  summarize(count = n())
+```
+
+again we can pivot this to make it easier to read
+```{r}
+app_data |>
+  drop_na(SexF, DiagnosisF, SeverityF) |>
+  group_by(SexF, DiagnosisF, SeverityF) |>
+  summarize(count = n()) |>
+  pivot_wider(names_from = SeverityF, values_from = count)
+```
+
