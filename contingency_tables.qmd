@@ -2,6 +2,7 @@
 title: "week_7"
 format: html
 editor: visual
+warning: FALSE
 editor_options: 
   chunk_output_type: console
 ---
@@ -127,5 +128,73 @@ app_data |>
   group_by(SexF, DiagnosisF, SeverityF) |>
   summarize(count = n()) |>
   pivot_wider(names_from = SeverityF, values_from = count)
+```
+
+
+## ggplot2
+
+reading in data from last lecture
+```{r}
+app_data
+```
+
+creating ggplot
+```{r}
+g <- ggplot(data = app_data |>
+         drop_na(SexF, DiagnosisF),
+         aes(x = SexF, fill = DiagnosisF)) 
+g + geom_bar() +
+  labs(x = "Sex") + #change x-axis name
+  scale_fill_discrete("Diagnosis") #change name of legend
+```
+ 
+ make a horizontal bar plot with **coord_flip**
+```{r}
+g <- ggplot(data = app_data |>
+         drop_na(SexF, DiagnosisF),
+         aes(x = SexF, fill = DiagnosisF)) 
+g + geom_bar() +
+  labs(x = "Sex") + #change x-axis name
+  scale_fill_discrete("Diagnosis") + #change name of legend
+  coord_flip()#make horizontal
+```
+ 
+ most geoms have corresponding stat layer that can be used
+```{r}
+geom_bar(mapping = NULL, data = NULL, stat = "count",
+         position = "stack", ..., width = NULL, binwidth= NULL, na.rm = FALSE,
+         show.legend = NA, inherit.aes = TRUE)
+```
+ 
+ equilvalent plots via: 
+```{r}
+ggplot(data = app_data |>
+         drop_na(SexF, DiagnosisF),
+       aes(x = SexF, fill = DiagnosisF)) + geom_bar()
+```
+ 
+```{r}
+# or
+ggplot(data = app_data |>
+         drop_na(SexF, DiagnosisF),
+       aes(x = SexF, fill = DiagnosisF)) + stat_count()
+```
+
+ can modify the stat: if you have summary data, specify y and use stat = identity
+```{r}
+ggplot(data = app_data |>
+         drop_na(SexF, DiagnosisF) |>
+         group_by(SexF, DiagnosisF) |>
+         summarize(count = n()), aes(x = SexF, y = count, fill = DiagnosisF)) +
+  geom_bar(stat = "identity")
+```
+ 
+side-by-side barplots created via position aesthetic
+```{r}
+ggplot(data = app_data |>
+         drop_na(SexF, DiagnosisF), aes(x = SexF, fill = DiagnosisF)) +
+  geom_bar(position = "dodge") +
+  labs(x = "Sex") +
+  scale_fill_discrete("Diagnosis")
 ```
 
