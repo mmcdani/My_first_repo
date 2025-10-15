@@ -1,0 +1,129 @@
+---
+title: "Better Programming"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+load libraries 
+```{r}
+library(purrr)
+library(tidyverse)
+```
+
+## map()
+
+```{r}
+set.seed(10)
+my_list <- list(rnorm(100), runif(10), rgamma(40, shape = 1, rate = 1))
+map(my_list, mean)
+```
+
+map allows for short hand lets compare map() and lapply()
+```{r}
+# grab the 2nd element from each list element 
+map(my_list, 2)
+```
+
+with lapply()
+```{r}
+lapply(my_list, function(x) x[[2]])
+```
+
+another way 
+```{r}
+lapply(my_list, `[[`, 2)
+```
+
+purr functions also give shorthand way to create anonymous functions 
+```{r}
+map(my_list, \(x) mean(x))
+```
+
+```{r}
+map(my_list, \(x) max(x)-min(x))
+```
+
+map_*() - allows you to specify the type of outputs 
+```{r}
+map_dbl(my_list, mean) # returns a vector
+```
+
+map2() - allows you to apply a function to two similar lists (returns a list)
+```{r}
+my_list_2 <- list(rnorm(100), runif(10), rgamma(40, shape = 1, rate = 1))
+map2(my_list, my_list_2, \(x,y) mean(x)-mean(y))
+```
+
+pmap() - extends the idea to an arbitrary number of files
+```{r}
+my_list_3 <- list(rnorm(100), runif(10), rgamma(40, shape = 1, rate = 1))
+pmap(list(my_list, my_list_2, my_list_3),
+     \(x, y, z) (mean(x)-mean(y))/ mean(z))
+```
+
+walk() - allows you to use a side-effect function but return the original data 
+a side effect function is a function that doesnt change the data it just produces something some examples are print(), read_csv(), and plot()
+```{r}
+#just apply the function
+par(mfrow = c(1,3))
+my_list |>
+  map(hist)
+```
+
+```{r}
+par(mfrow = c(1,3))
+#now with walk() function 
+my_list |>
+  walk(hist) |>
+  map_dbl(mean)
+```
+
+## List Columns 
+
+```{r}
+iris |>
+  as_tibble() |>
+  mutate(diffs = pmap(list(Sepal.Length, Sepal.Width, Petal.Length, Petal.Width),
+                      \ (x,y,z,w) list(x-y, x-z, x-w))) |>
+  select(diffs, everything())
+```
+
+pull() - to get a paricular column out of a dataframe
+```{r}
+iris |>
+  as_tibble() |>
+  mutate(diffs = pmap(list(Sepal.Length, Sepal.Width, Petal.Length, Petal.Width),
+                      \ (x,y,z,w) list(x-y, x-z, x-w))) |>
+  select(diffs, everything()) |>
+  pull(diffs)
+```
+
+another example 
+```{r}
+library(httr)
+library(jsonlite)
+game_info <- GET("https://api-web.nhle.com/v1/score/2024-04-04") |>
+  content("text") |> 
+  fromJSON(flatten = TRUE, simplifyDataFrame = TRUE) |>
+  pluck("games")
+```
+
+check out the structure
+```{r}
+str(game_info, max.level = 1)
+```
+
+pull out the tv broadcast column 
+```{r}
+game_info$tvBroadcasts
+```
+
+add a column 
+```{r}
+game_info |>
+  mutate(num_networks = map(tvBroadcasts, nrow)) |>
+  select(num_networks, tvBroadcasts, everything())
+```
+
+## Advanced Function Writing

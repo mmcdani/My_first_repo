@@ -198,3 +198,132 @@ ggplot(data = app_data |>
   scale_fill_discrete("Diagnosis")
 ```
 
+reading in data from previous lecture 
+```{r}
+library(tidyverse)
+library(readxl)
+app_data <- read_excel("data/app_data.xlsx", sheet = 1)
+app_data <- app_data |>
+  mutate(BMI = as.numeric(BMI),
+         US_Number = as.character(US_Number),
+         SexF = factor(Sex, levels = c("female", "male"), labels = c("Female", "Male")),
+         DiagnosisF = as.factor(Diagnosis),
+         SeverityF = as.factor(Severity))
+app_data
+```
+
+### measures of center 
+```{r}
+app_data |>
+  summarize(mean_BMI = mean(BMI, na.rm = TRUE), med_BMI = median(BMI, na.rm = TRUE))
+```
+
+check on all numeric variables 
+```{r}
+app_data |>
+  summarize(across(where(is.numeric), 
+                   list("mean" = mean, "median" = median), 
+                   .names = "{.fn}_{.col}"))
+```
+
+need to get rid of the NA value 
+```{r}
+app_data |>
+  summarize(across(where(is.numeric), 
+                   list("mean" = ~ mean(.x, na.rm = TRUE), "median" = ~ median(.x, na.rm = TRUE)), 
+                   .names = "{.fn}_{.col}"))
+```
+
+Statistics across groups with group_by function 
+```{r}
+app_data |>
+  group_by(Diagnosis, Sex) |>
+  drop_na(Diagnosis, Sex) |>
+  summarize(mean_BMI = mean(BMI, na.rm = TRUE), med_BMI = median(BMI, na.rm = TRUE))
+
+#`summarise()` has grouped output by 'Diagnosis'. You can override using the .groups` argument.
+```
+
+can do this another fancier way 
+```{r}
+app_data |>
+  group_by(Diagnosis, Sex) |>
+  drop_na(Diagnosis, Sex) |>
+  summarize(across(where(is.numeric), 
+                   list("mean" = ~ mean(.x, na.rm = TRUE), "median" = ~ median(.x, na.rm = TRUE)), 
+                   .names = "{.fn}_{.col}"))
+```
+
+### Measures of spread
+```{r}
+app_data |>
+  group_by(Diagnosis, Sex) |>
+  drop_na(Diagnosis, Sex) |>
+  summarize(sd_BIM = sd(BMI, na.rm = TRUE), IQR_BMI = IQR(BMI, na.rm = TRUE))
+```
+
+### Measures of association between two numeric variables 
+```{r}
+app_data |>
+  group_by(Diagnosis, Sex) |>
+  drop_na(Diagnosis, Sex) |>
+  summarize(correlation = cor(BMI, Age))
+```
+
+to do this with missing variables 
+```{r}
+app_data |>
+  group_by(Diagnosis, Sex) |>
+  drop_na(Diagnosis, Sex) |>
+  summarize(correlation = cor(BMI, Age, use = "pairwise.complete.obs"))
+```
+
+## Numeric Variables and More Video 
+
+load in data 
+```{r}
+library(tidyverse)
+library(readxl)
+app_data <- read_excel("data/app_data.xlsx", sheet = 1)
+app_data <- app_data |>
+  mutate(BMI = as.numeric(BMI),
+         US_Number = as.character(US_Number),
+         SexF = factor(Sex, levels = c("female", "male"), labels = c("Female", "Male")),
+         DiagnosisF = as.factor(Diagnosis),
+         SeverityF = as.factor(Severity))
+app_data
+```
+
+Kernel smoother - smoothed version of a histogram 
+```{r}
+g <- ggplot(app_data |>
+              drop_na(RBC_Count), 
+            aes(x = RBC_Count))
+g + geom_density()
+```
+
+remove really large values and use the fill aesthetic to compare groups 
+```{r}
+g <- ggplot(app_data |>
+              drop_na(RBC_Count, Diagnosis) |>
+              filter(RBC_Count < 8), 
+            aes(x = RBC_Count))
+#alpha is set to how much we want to see through the graph 0 = completely see through and 1 = not see through
+g + geom_density(alpha = 0.5, aes(fill = Diagnosis))
+```
+adding "fill"
+```{r}
+g <- ggplot(app_data |>
+              drop_na(RBC_Count, Diagnosis) |>
+              filter(RBC_Count < 8), 
+            aes(x = RBC_Count))
+g + geom_density(alpha = 0.5, position = "fill", aes(fill = Diagnosis))
+```
+
+### ggplot2 Boxplots 
+```{r}
+g <- ggplot(app_data |>
+              drop_na(RBC_Count, Diagnosis) |>
+              filter(RBC))
+```
+
