@@ -1,0 +1,33 @@
+---
+title: "RShiny"
+format: html
+editor: visual
+---
+
+## Example App
+
+```{r}
+library(...)
+ui <- fluidPage(
+  #application title
+  titlePanel("Investigation of Mammal Sleep Data"),
+  #Sidebar with options for the data set 
+  sidebarLayout(
+    sidebarPanel(
+      h3("Select the mammals biological order: "),
+      selectizeInput("vore",
+                     "Vore",
+                     selected = "omni",
+                     choices = levels(as.factor(msleep$vore))
+      ),
+      ...
+      #Show outputs 
+      mainPanel(
+        plotOutput("sleepPlot"),
+        textOutput("info"),
+        tableOutput("table")
+      )
+    )
+  )
+)
+```
