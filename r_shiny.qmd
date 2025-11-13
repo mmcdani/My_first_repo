@@ -1,13 +1,13 @@
 ---
-title: "RShiny"
+title: "practice"
 format: html
-editor: visual
+server: shiny
 ---
 
-## Example App
 
+## R Shiny
 ```{r}
-library(...)
+library(shiny)
 ui <- fluidPage(
   #application title
   titlePanel("Investigation of Mammal Sleep Data"),
@@ -20,7 +20,6 @@ ui <- fluidPage(
                      selected = "omni",
                      choices = levels(as.factor(msleep$vore))
       ),
-      ...
       #Show outputs 
       mainPanel(
         plotOutput("sleepPlot"),
@@ -31,3 +30,27 @@ ui <- fluidPage(
   )
 )
 ```
+
+
+```{r}
+server <- -function(input, output, session) {
+  #get data for only order specified 
+  getData <- reactive({
+    vores <- input$vore
+    msleep %>% filter(vore == vores)
+  })
+  #create plot 
+  output$sleepPlot <- renderPlot({
+    #get data 
+    sleepData <- getData()
+    #base plotting object
+    g <- ggplot(sleepData, aes(x = bodywt, y = sleep_total))
+    if (input$conservation) {
+      g + geom_point(size = input$size, aes(col = conservation))
+    } else {
+    g + geom_point(size = input$size)
+  }
+})
+...
+```
+
