@@ -1,0 +1,214 @@
+---
+title: "ensemble_models"
+format: html
+editor: visual
+---
+
+read in our heart disease data 
+```{r}
+library(tidyverse)
+library(tidymodels)
+heart_data <- read_csv("https://www4.stat.ncsu.edu/online/datasets/heart.csv") |>
+  filter(RestingBP > 0) #remove one value
+heart_data <- heart_data |> mutate(HeartDisease = factor(HeartDisease))
+heart_split <- initial_split(heart_data, prop = 0.8)
+heart_train <- training(heart_split)
+heart_test <- testing(heart_split)
+heart_CV_folds <- vfold_cv(heart_train, 10)
+heart_data
+```
+
+Recall: For tree based methods we don't need to worry about interactions
+Can reuse the recipes from previous!
+```{r}
+LR3_rec <- recipe(HeartDisease ~ Age + Sex + ChestPainType + RestingBP + RestingECG + MaxHR + ExerciseAngina, 
+                  data = heart_train) |>
+  step_normalize(all_numeric(), -HeartDisease) |>
+  step_dummy(Sex, ChestPainType, RestingECG, ExerciseAngina)
+LR3_rec |> 
+  prep(heart_train) |> 
+  bake(heart_train) |> 
+  colnames()
+```
+
+Now set up our model type and engine
+
+Using this parsnip model
+
+Could tune on a few things here if we'd like
+```{r}
+bag_spec <- bag_tree(tree_depth = 5, min_n = 10, cost_complexity = tune()) |>
+  set_engine("rpart") |>
+  set_mode("classification")
+```
+
+create our workflows 
+```{r}
+#install baguette package if not already done!
+library(baguette)
+bag_wkf <- workflow() |>
+  add_recipe(LR3_rec) |>
+  add_model(bag_spec)
+```
+
+Fit to our CV folds!
+
+Note: CV isn't really necessary. We could use out-of-bag observations to determine how well our model works instead!
+```{r}
+bag_fit <- bag_wkf |>
+  tune_grid(resamples = heart_CV_folds, 
+            grid = grid_regular(cost_complexity(),
+                                levels = 15),
+            metrics = metric_set(accuracy, mn_log_loss))
+bag_fit
+```
+
+Check our metrics across the folds!
+
+Look at log loss and sort it
+```{r}
+bag_fit |>
+  collect_metrics() |>
+  filter(.metric == "mn_log_loss") |> 
+  arrange(mean)
+```
+
+Get our best tuning parameter
+```{r}
+bag_best_params <- select_best(bag_fit, metric = "mn_log_loss")
+bag_best_params
+```
+
+Refit on the entire training set using this tuning parameter
+```{r}
+bag_final_wkf <- bag_wkf |>
+  finalize_workflow(bag_best_params)
+bag_final_fit <- bag_final_wkf |>
+  last_fit(heart_split, metrics = metric_set(accuracy, mn_log_loss))
+```
+
+For comparison, let's fit our same logistic regression model from previous
+```{r}
+LR_spec <- logistic_reg() |>
+  set_engine("glm")
+LR3_wkf <- workflow() |>
+  add_recipe(LR3_rec) |>
+  add_model(LR_spec)
+LR3_fit <- LR3_wkf |>
+  fit_resamples(heart_CV_folds, metrics = metric_set(accuracy, mn_log_loss))
+rbind(LR3_fit |> collect_metrics(),
+      bag_fit |> collect_metrics() |>
+        filter(cost_complexity == bag_best_params$cost_complexity) |> 
+        select(-cost_complexity))
+```
+
+Take these models to the test set and see how they do
+```{r}
+#test on the test set!
+LR_final_fit <- LR3_wkf |>
+  last_fit(heart_split, metrics = metric_set(accuracy, mn_log_loss)) 
+LR_final_fit |> collect_metrics()
+```
+
+```{r}
+bag_final_fit |> collect_metrics()
+```
+
+## Investigate Bagged Tree Model
+As before, we can extract our final model and check it out
+
+Let's first refit to the entire data set
+```{r}
+bag_full_fit <- bag_final_wkf |>
+  fit(heart_data)
+bag_full_fit
+```
+
+As before, we can extract our final model and check it out
+
+Extract the final model and then plot the variable importance
+```{r}
+bag_final_model <- extract_fit_engine(bag_full_fit) 
+bag_final_model$imp |>
+  mutate(term = factor(term, levels = term)) |>
+  ggplot(aes(x = term, y = value)) + 
+  geom_bar(stat ="identity") +
+  coord_flip()
+```
+
+By randomly selecting a subset of predictors, a good predictor or two won't dominate the tree fits
+
+Rules of thumb exist for the number to use but better to use CV!
+
+Let's use the same recipe but fit a random forest model
+```{r}
+rf_spec <- rand_forest(mtry = tune()) |>
+  set_engine("ranger") |>
+  set_mode("classification")
+```
+
+Create our workflows
+```{r}
+rf_wkf <- workflow() |>
+  add_recipe(LR3_rec) |>
+  add_model(rf_spec)
+```
+
+Fit to our CV folds!
+
+Note: CV isn't really necessary. We could use out-of-bag observations to determine how well our model works instead!
+```{r}
+rf_fit <- rf_wkf |>
+  tune_grid(resamples = heart_CV_folds, 
+            grid = 7,
+            metrics = metric_set(accuracy, mn_log_loss))
+```
+
+Check our metrics across the folds!
+
+Look at log loss and sort it
+```{r}
+rf_fit |>
+  collect_metrics() |>
+  filter(.metric == "mn_log_loss") |> 
+  arrange(mean)
+```
+
+Get our best tuning parameter
+```{r}
+rf_best_params <- select_best(rf_fit, metric = "mn_log_loss")
+rf_best_params
+```
+
+Refit on the entire training set using this tuning parameter
+```{r}
+rf_final_wkf <- rf_wkf |>
+  finalize_workflow(rf_best_params)
+rf_final_fit <- rf_final_wkf |>
+  last_fit(heart_split, metrics = metric_set(accuracy, mn_log_loss))
+```
+
+Random Forest model does better than bagging! Could tune more parameters to possibly improve
+```{r}
+LR_final_fit |> collect_metrics()
+```
+
+```{r}
+bag_final_fit |> collect_metrics()
+```
+
+```{r}
+rf_final_fit |> collect_metrics()
+```
+
+Recap
+Averaging many trees can greatly improve prediction
+
+Comes at a loss of interpretability
+Variable importance measures can be used
+Bagging
+
+Fit many trees on bootstrap samples and combine predictions in some way
+Random Forest
+
+Do bagging but randomly select the predictors to use at each split
